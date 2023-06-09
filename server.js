@@ -117,6 +117,38 @@ app.get("/user/:email", async (req, res) => {
   }
 })
 
+
+
+// get all customers
+app.get('/customers/:email', async(req,res)=>{
+  try {
+    const customerOwnerEmail=req.params.email
+    console.log("owner email",customerOwnerEmail)
+    
+    const result = await customerCollection.find({customerOwnerEmail:customerOwnerEmail}).toArray();
+    if(result.length){
+      res.status(200).send({
+        success: true,
+        data: result
+      });
+    }
+    else{
+      res.status(200).send({
+        success: false,
+        message: `No cumtomer found`,
+        data: [],
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+    res.status(404).send({
+      success: false,
+      data: null,
+      message: `Operation failed`
+    });
+  }
+})
+
 // ------------------------ALL GET OPERATION _________________________________
 
 // 
