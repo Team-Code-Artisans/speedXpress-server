@@ -1,4 +1,4 @@
-const router = require("express").Router();
-const tokenController = require("../controllers/tokenController");
+// const router = require("express").Router();
+// const tokenController = require("../controllers/tokenController");
 
-router.route("/").get(tokenController.sendToken);
+// router.route("/").get(tokenController.sendToken);

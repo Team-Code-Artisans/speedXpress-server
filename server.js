@@ -16,10 +16,10 @@ const client = new MongoClient(uri, {
 
 const DBConnect = async () => {
   try {
-      await client.connect();
-      console.log("success connection to db");
+    await client.connect();
+    console.log("success connection to db");
   } catch (error) {
-      console.log(error.message);
+    console.log(error.message);
   }
 }
 
@@ -32,11 +32,21 @@ app.listen(port, () => {
 })
 
 
+app.get("/", (req, res) => {
+  res.send({
+    message: "speedXpress server is running "
+  })
+})
+
 
 
 // collections
 const usersCollection = client.db('speed-xpress').collection('users');
+const parcelsCollection = client.db('speed-xpress').collection('parcels');
+const customerCollection = client.db('speed-xpress').collection('customers');
 
+
+// ------------------------ALL PUT OPERATION _________________________________
 
 // Save user email & generate JWT
 app.put('/user/:email', async (req, res) => {
@@ -57,18 +67,26 @@ app.put('/user/:email', async (req, res) => {
 })
 
 
+// ------------------------ALL PUT OPERATION _________________________________
+
+// 
+// 
+
+// 
+
+// ------------------------ALL GET OPERATION _________________________________
 
 // generate jwt token
 app.get("/jwt", (req, res) => {
   try {
     const { email } = req.query;
-    console.log(email);
+    console.log("jwt", email);
 
     const token = jwt.sign({ email }, process.env.ACCESS_TOKEN_SECRET, {
       expiresIn: '1d',
     })
     if (token) {
-      // console.log(token)
+      console.log(token)
       res.send({ token })
     }
     else {
@@ -81,3 +99,92 @@ app.get("/jwt", (req, res) => {
   }
 
 })
+
+
+// get a single user by email
+
+app.get("/user/:email", async (req, res) => {
+  try {
+    const { email } = req.params;
+    console.log("get user", email)
+    const query = {
+      email: email
+    }
+    const result = await usersCollection.findOne(query);
+    res.send(result)
+  } catch (error) {
+    console.log(error.message)
+  }
+})
+
+// ------------------------ALL GET OPERATION _________________________________
+
+// 
+
+// 
+
+// 
+
+
+// 
+
+
+// ------------------------ALL POST OPERATION _________________________________
+
+// create parcel .
+app.post("/parcel", async (req, res) => {
+
+  try {
+    const customerData = req.body;
+    const result = await parcelsCollection.insertOne(customerData)
+
+    if (result.acknowledged) {
+      res.send({
+        message: "parcel creation successfull ",
+        data: result
+      });
+
+    }
+  } catch (error) {
+    console.log(error.message)
+    res.status(404).send({
+      message: "Booking failed! for some issue!",
+      data: null
+    });
+  }
+})
+
+
+// save customer info
+
+
+app.put('/customer', async (req, res) => {
+  try {
+
+    const customerData = req.body
+    console.log(customerData)
+    // const filter = { email: email }
+    const options = { upsert: true }
+    const updateDoc = {
+      $set: customerData,
+    }
+    const result = await customerCollection.updateOne(updateDoc, options);
+    console.log(result)
+    res.send(result)
+  } catch (error) {
+    console.log(error.message)
+  }
+})
+
+
+
+
+
+
+
+
+
+
+
+
+// ------------------------ALL Post OPERATION _________________________________
