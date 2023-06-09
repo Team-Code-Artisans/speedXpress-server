@@ -190,6 +190,7 @@ app.post("/parcel", async (req, res) => {
 // save customer info
 
 
+
 app.put('/customer/:email', async (req, res) => {
   try {
 
@@ -203,6 +204,7 @@ app.put('/customer/:email', async (req, res) => {
     }
 // if customer exist then replace him and if don't exisst then create new customer ..
     const result = await customerCollection.updateOne(filter,updateDoc, options);
+
     console.log(result)
     res.send(result)
   } catch (error) {
