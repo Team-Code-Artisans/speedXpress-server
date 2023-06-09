@@ -158,17 +158,21 @@ app.post("/parcel", async (req, res) => {
 // save customer info
 
 
-app.put('/customer', async (req, res) => {
+
+app.put('/customer/:email', async (req, res) => {
   try {
 
-    const customerData = req.body
-    console.log(customerData)
-    // const filter = { email: email }
+    const email = req.params.email
+    const customer = req.body
+
+    const filter = { email: email }
     const options = { upsert: true }
     const updateDoc = {
-      $set: customerData,
+      $set: customer,
     }
-    const result = await customerCollection.updateOne(updateDoc, options);
+// if customer exist then replace him and if don't exisst then create new customer ..
+    const result = await customerCollection.updateOne(filter,updateDoc, options);
+
     console.log(result)
     res.send(result)
   } catch (error) {
