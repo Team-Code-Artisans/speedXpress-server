@@ -120,22 +120,51 @@ app.get("/user/:email", async (req, res) => {
 
 
 // get all customers
-app.get('/customers/:email', async(req,res)=>{
+app.get('/customers/:email', async (req, res) => {
   try {
-    const customerOwnerEmail=req.params.email
-    console.log("owner email",customerOwnerEmail)
-    
-    const result = await customerCollection.find({customerOwnerEmail:customerOwnerEmail}).toArray();
-    if(result.length){
+    const customerOwnerEmail = req.params.email
+    console.log("owner email", customerOwnerEmail)
+
+    const result = await customerCollection.find({ customerOwnerEmail: customerOwnerEmail }).toArray();
+    if (result.length) {
       res.status(200).send({
         success: true,
         data: result
       });
     }
-    else{
+    else {
       res.status(200).send({
         success: false,
         message: `No cumtomer found`,
+        data: [],
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+    res.status(404).send({
+      success: false,
+      data: null,
+      message: `Operation failed`
+    });
+  }
+})
+
+app.get('/parcels', async (req, res) => {
+  try {
+    const senderEmail = req.query.email
+    console.log("Shop Email", senderEmail)
+
+    const result = await parcelsCollection.find({ senderEmail: senderEmail }).toArray();
+    if (result.length) {
+      res.status(200).send({
+        success: true,
+        data: result
+      });
+    }
+    else {
+      res.status(200).send({
+        success: false,
+        message: `No Parcels found`,
         data: [],
       });
     }
@@ -202,8 +231,8 @@ app.put('/customer/:email', async (req, res) => {
     const updateDoc = {
       $set: customer,
     }
-// if customer exist then replace him and if don't exisst then create new customer ..
-    const result = await customerCollection.updateOne(filter,updateDoc, options);
+    // if customer exist then replace him and if don't exisst then create new customer ..
+    const result = await customerCollection.updateOne(filter, updateDoc, options);
 
     console.log(result)
     res.send(result)
