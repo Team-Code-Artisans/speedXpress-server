@@ -137,6 +137,36 @@ app.get("/customers/:email", async (req, res) => {
   }
 });
 
+app.get("/parcels", async (req, res) => {
+  try {
+    const senderEmail = req.query.email;
+    console.log("Shop Email", senderEmail);
+
+    const result = await parcelsCollection
+      .find({ senderEmail: senderEmail })
+      .toArray();
+    if (result.length) {
+      res.status(200).send({
+        success: true,
+        data: result,
+      });
+    } else {
+      res.status(200).send({
+        success: false,
+        message: `No Parcels found`,
+        data: [],
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+    res.status(404).send({
+      success: false,
+      data: null,
+      message: `Operation failed`,
+    });
+  }
+});
+
 // ------------------------ALL GET OPERATION _________________________________
 
 // get merchant shops
