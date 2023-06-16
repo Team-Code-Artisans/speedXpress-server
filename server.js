@@ -2,7 +2,7 @@ const app = require("./app");
 const dotenv = require("dotenv").config();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion } = require("mongodb");
-const jwt = require("jsonwebtoken")
+const jwt = require("jsonwebtoken");
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.n84h1t4.mongodb.net/?retryWrites=true&w=majority`;
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -21,58 +21,52 @@ const DBConnect = async () => {
   } catch (error) {
     console.log(error.message);
   }
-}
+};
 
 DBConnect();
 
-
-
 app.listen(port, () => {
   console.log("server is running in ", port || 5000);
-})
-
+});
 
 app.get("/", (req, res) => {
   res.send({
-    message: "speedXpress server is running "
-  })
-})
-
-
+    message: "speedXpress server is running ",
+  });
+});
 
 // collections
-const usersCollection = client.db('speed-xpress').collection('users');
-const parcelsCollection = client.db('speed-xpress').collection('parcels');
-const customerCollection = client.db('speed-xpress').collection('customers');
-
+const usersCollection = client.db("speed-xpress").collection("users");
+const parcelsCollection = client.db("speed-xpress").collection("parcels");
+const customerCollection = client.db("speed-xpress").collection("customers");
+const shopsCollection = client.db("speed-xpress").collection("shops");
 
 // ------------------------ALL PUT OPERATION _________________________________
 
 // Save user email & generate JWT
-app.put('/user/:email', async (req, res) => {
+app.put("/user/:email", async (req, res) => {
   try {
-    const email = req.params.email
-    const user = req.body
+    const email = req.params.email;
+    const user = req.body;
 
-    const filter = { email: email }
-    const options = { upsert: true }
+    const filter = { email: email };
+    const options = { upsert: true };
     const updateDoc = {
       $set: user,
-    }
-    const result = await usersCollection.updateOne(filter, updateDoc, options)
-    res.send(result)
+    };
+    const result = await usersCollection.updateOne(filter, updateDoc, options);
+    res.send(result);
   } catch (error) {
-    console.log(error.message)
+    console.log(error.message);
   }
-})
-
+});
 
 // ------------------------ALL PUT OPERATION _________________________________
 
-// 
-// 
+//
+//
 
-// 
+//
 
 // ------------------------ALL GET OPERATION _________________________________
 
@@ -83,56 +77,50 @@ app.get("/jwt", (req, res) => {
     console.log("jwt", email);
 
     const token = jwt.sign({ email }, process.env.ACCESS_TOKEN_SECRET, {
-      expiresIn: '1d',
-    })
+      expiresIn: "1d",
+    });
     if (token) {
-      console.log(token)
-      res.send({ token })
+      console.log(token);
+      res.send({ token });
+    } else {
+      res.send({ message: "Failed to get token from server" });
     }
-    else {
-      res.send({ message: "Failed to get token from server" })
-    }
-
   } catch (error) {
-    console.log(error)
-
+    console.log(error);
   }
-
-})
-
+});
 
 // get a single user by email
 
 app.get("/user/:email", async (req, res) => {
   try {
     const { email } = req.params;
-    console.log("get user", email)
+    console.log("get user", email);
     const query = {
-      email: email
-    }
+      email: email,
+    };
     const result = await usersCollection.findOne(query);
-    res.send(result)
+    res.send(result);
   } catch (error) {
-    console.log(error.message)
+    console.log(error.message);
   }
-})
-
-
+});
 
 // get all customers
-app.get('/customers/:email', async(req,res)=>{
+app.get("/customers/:email", async (req, res) => {
   try {
-    const customerOwnerEmail=req.params.email
-    console.log("owner email",customerOwnerEmail)
-    
-    const result = await customerCollection.find({customerOwnerEmail:customerOwnerEmail}).toArray();
-    if(result.length){
+    const customerOwnerEmail = req.params.email;
+    console.log("owner email", customerOwnerEmail);
+
+    const result = await customerCollection
+      .find({ customerOwnerEmail: customerOwnerEmail })
+      .toArray();
+    if (result.length) {
       res.status(200).send({
         success: true,
-        data: result
+        data: result,
       });
-    }
-    else{
+    } else {
       res.status(200).send({
         success: false,
         message: `No cumtomer found`,
@@ -144,83 +132,120 @@ app.get('/customers/:email', async(req,res)=>{
     res.status(404).send({
       success: false,
       data: null,
-      message: `Operation failed`
+      message: `Operation failed`,
     });
   }
-})
+});
 
 // ------------------------ALL GET OPERATION _________________________________
 
-// 
+// get merchant shops
+app.get("/shop", async (req, res) => {
+  console.log(req.query.email);
+  try {
+    const shopOwnerEmail = req.query.email;
+    const result = await shopsCollection
+      .find({
+        shopEmail: shopOwnerEmail,
+      })
+      .toArray();
+    if (result.length) {
+      res.status(200).send({
+        success: true,
+        message: `successfully found`,
+        data: result,
+      });
+    } else {
+      res.status(200).send({
+        success: false,
+        message: `No shop found`,
+        data: [],
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+    res.status(404).send({
+      success: false,
+      data: null,
+      message: `Operation failed`,
+    });
+  }
+});
 
-// 
+//
 
-// 
+//
 
-
-// 
-
+//
 
 // ------------------------ALL POST OPERATION _________________________________
 
 // create parcel .
 app.post("/parcel", async (req, res) => {
-
   try {
     const customerData = req.body;
-    const result = await parcelsCollection.insertOne(customerData)
+    const result = await parcelsCollection.insertOne(customerData);
 
     if (result.acknowledged) {
       res.send({
         message: "parcel creation successfull ",
-        data: result
+        data: result,
       });
-
     }
   } catch (error) {
-    console.log(error.message)
+    console.log(error.message);
     res.status(404).send({
       message: "Booking failed! for some issue!",
-      data: null
+      data: null,
     });
   }
-})
-
+});
 
 // save customer info
 
-
-
-app.put('/customer/:email', async (req, res) => {
+// create merchant shop .
+app.post("/create-shop", async (req, res) => {
   try {
+    const shopData = req.body;
+    const result = await shopsCollection.insertOne(shopData);
 
-    const email = req.params.email
-    const customer = req.body
+    if (result.acknowledged) {
+      res.send({
+        message: "shop creation successfull ",
+        data: result,
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+    res.status(404).send({
+      message: "Shop Booking failed! for some issue!",
+      data: null,
+    });
+  }
+});
 
-    const filter = { email: email }
-    const options = { upsert: true }
+app.put("/customer/:email", async (req, res) => {
+  try {
+    const email = req.params.email;
+    const customer = req.body;
+
+    const filter = { email: email };
+    const options = { upsert: true };
     const updateDoc = {
       $set: customer,
-    }
-// if customer exist then replace him and if don't exisst then create new customer ..
-    const result = await customerCollection.updateOne(filter,updateDoc, options);
+    };
+    // if customer exist then replace him and if don't exisst then create new customer ..
+    const result = await customerCollection.updateOne(
+      filter,
+      updateDoc,
+      options
+    );
 
-    console.log(result)
-    res.send(result)
+    console.log(result);
+    res.send(result);
   } catch (error) {
-    console.log(error.message)
+    console.log(error.message);
   }
-})
-
-
-
-
-
-
-
-
-
-
-
+});
 
 // ------------------------ALL Post OPERATION _________________________________
