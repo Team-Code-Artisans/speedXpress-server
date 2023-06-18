@@ -5,6 +5,7 @@ const { MongoClient, ServerApiVersion } = require("mongodb");
 const jwt = require("jsonwebtoken");
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.n84h1t4.mongodb.net/?retryWrites=true&w=majority`;
+
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
@@ -109,11 +110,11 @@ app.get("/user/:email", async (req, res) => {
 // get all customers
 app.get("/customers/:email", async (req, res) => {
   try {
-    const customerOwnerEmail = req.params.email;
-    console.log("owner email", customerOwnerEmail);
+    const merchantEmail = req.params.email;
+    console.log("merchant Email", merchantEmail);
 
     const result = await customerCollection
-      .find({ customerOwnerEmail: customerOwnerEmail })
+      .find({ merchantEmail: merchantEmail })
       .toArray();
     if (result.length) {
       res.status(200).send({
