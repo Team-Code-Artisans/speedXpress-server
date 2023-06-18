@@ -168,6 +168,32 @@ app.get("/parcels", async (req, res) => {
   }
 });
 
+// get all parcel for admin account
+app.get("/all-parcels", async (req, res) => {
+  try {
+    const result = await parcelsCollection.find({}).toArray();
+    if (result.length) {
+      res.status(200).send({
+        success: true,
+        data: result,
+      });
+    } else {
+      res.status(200).send({
+        success: false,
+        message: `No Parcels found`,
+        data: [],
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+    res.status(404).send({
+      success: false,
+      data: null,
+      message: `Operation failed`,
+    });
+  }
+});
+
 // ------------------------ALL GET OPERATION _________________________________
 
 // get merchant shops
@@ -280,5 +306,3 @@ app.put("/customer/:email", async (req, res) => {
 });
 
 // ------------------------ALL Post OPERATION _________________________________
-
-
