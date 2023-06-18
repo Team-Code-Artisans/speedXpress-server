@@ -109,11 +109,11 @@ app.get("/user/:email", async (req, res) => {
 // get all customers
 app.get("/customers/:email", async (req, res) => {
   try {
-    const customerOwnerEmail = req.params.email;
-    console.log("owner email", customerOwnerEmail);
+    const merchantEmail = req.params.email;
+    console.log("owner email", merchantEmail);
 
     const result = await customerCollection
-      .find({ customerOwnerEmail: customerOwnerEmail })
+      .find({ merchantEmail: merchantEmail })
       .toArray();
     if (result.length) {
       res.status(200).send({
@@ -279,3 +279,5 @@ app.put("/customer/:email", async (req, res) => {
 });
 
 // ------------------------ALL Post OPERATION _________________________________
+
+
