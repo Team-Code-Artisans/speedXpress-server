@@ -198,7 +198,7 @@ app.get("/all-parcels", async (req, res) => {
 
 // get all merchant 
 
-app.get('/myMerchants/:userType',async (req,res)=>{
+app.get('/getUser/:userType',async (req,res)=>{
   const userType = req.params.userType;
     try {
       const query = {account_type: userType}
