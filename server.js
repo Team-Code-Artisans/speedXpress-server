@@ -64,7 +64,39 @@ app.put("/user/:email", async (req, res) => {
 
 // ------------------------ALL PUT OPERATION _________________________________
 
-//
+//delivery status update
+app.patch("/update-status", async (req, res) => {
+  try {
+    const { parcelId, updatedStatus } = req.body;
+
+    const filter = { _id: new ObjectId(parcelId) };
+    const options = { upsert: true };
+    const updateDoc = { $set: { status: updatedStatus } };
+
+    const result = await parcelsCollection.updateOne(
+      filter,
+      updateDoc,
+      options
+    );
+    if (result.modifiedCount === 1) {
+      res.status(200).send({
+        success: true,
+        message: "Status updated successfully",
+      });
+    } else {
+      res.status(404).send({
+        success: false,
+        message: "Failed to update status",
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send({
+      success: false,
+      message: `Operation failed`,
+    });
+  }
+});
 //
 
 //
