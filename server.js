@@ -194,18 +194,46 @@ app.get("/all-parcels", async (req, res) => {
   }
 });
 
-// ------------------------ALL GET OPERATION _________________________________
+
+
+// get all merchant 
+
+app.get('/myMerchants/:userType',async (req,res)=>{
+  const userType = req.params.userType;
+    try {
+      const query = {account_type: userType}
+      const result = await usersCollection.find(query).toArray()
+      if(result.length){
+        res.status(200).send({
+          success: true,
+          data: result,
+          message:'oparation success'
+        })
+      }else{
+        res.status(200).send({
+          success: false,
+          message: 'no data found ',
+          data: []
+        })
+      }
+      
+    } catch (error) {
+      console.log(error);
+      res.status(404).send({
+        success:false,
+        message:`oparation failed`,
+        data:null
+      })
+    }
+})
+
 
 // get merchant shops
 app.get("/shop", async (req, res) => {
   console.log(req.query.email);
   try {
     const shopOwnerEmail = req.query.email;
-    const result = await shopsCollection
-      .find({
-        shopEmail: shopOwnerEmail,
-      })
-      .toArray();
+    const result = await shopsCollection.find({shopEmail: shopOwnerEmail}).toArray();
     if (result.length) {
       res.status(200).send({
         success: true,
