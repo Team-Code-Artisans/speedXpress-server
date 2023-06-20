@@ -215,6 +215,19 @@ app.get("/user/:email", async (req, res) => {
   }
 });
 
+app.get("/userData/:email", async (req, res) => {
+  try {
+    const { email } = req.params;
+    const query = {
+      email: email,
+    };
+    const result = await usersCollection.findOne(query);
+    res.send(result);
+  } catch (error) {
+    console.log(error.message);
+  }
+});
+
 // get all customers
 app.get("/customers/:email", async (req, res) => {
   try {
