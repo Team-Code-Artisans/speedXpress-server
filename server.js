@@ -1,9 +1,9 @@
 const app = require("./app");
 const dotenv = require("dotenv").config();
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
-
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KAY)
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.n84h1t4.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -101,7 +101,10 @@ app.get("/user/:email", async (req, res) => {
       email: email,
     };
     const result = await usersCollection.findOne(query);
-    res.send(result);
+    if (result?.account_type) {
+      console.log(result?.account_type)
+      res.send({ data: result?.account_type, message: `user founded and account type is ${result?.account_type}` });
+    } else res.status(200).send({ data: null, message: "no account found" });
   } catch (error) {
     console.log(error.message);
   }
@@ -198,33 +201,33 @@ app.get("/all-parcels", async (req, res) => {
 
 // get all merchant 
 
-app.get('/myMerchants/:userType',async (req,res)=>{
+app.get('/myMerchants/:userType', async (req, res) => {
   const userType = req.params.userType;
-    try {
-      const query = {account_type: userType}
-      const result = await usersCollection.find(query).toArray()
-      if(result.length){
-        res.status(200).send({
-          success: true,
-          data: result,
-          message:'oparation success'
-        })
-      }else{
-        res.status(200).send({
-          success: false,
-          message: 'no data found ',
-          data: []
-        })
-      }
-      
-    } catch (error) {
-      console.log(error);
-      res.status(404).send({
-        success:false,
-        message:`oparation failed`,
-        data:null
+  try {
+    const query = { account_type: userType }
+    const result = await usersCollection.find(query).toArray()
+    if (result.length) {
+      res.status(200).send({
+        success: true,
+        data: result,
+        message: 'oparation success'
+      })
+    } else {
+      res.status(200).send({
+        success: false,
+        message: 'no data found ',
+        data: []
       })
     }
+
+  } catch (error) {
+    console.log(error);
+    res.status(404).send({
+      success: false,
+      message: `oparation failed`,
+      data: null
+    })
+  }
 })
 
 
@@ -233,7 +236,7 @@ app.get("/shop", async (req, res) => {
   console.log(req.query.email);
   try {
     const shopOwnerEmail = req.query.email;
-    const result = await shopsCollection.find({shopEmail: shopOwnerEmail}).toArray();
+    const result = await shopsCollection.find({ shopEmail: shopOwnerEmail }).toArray();
     if (result.length) {
       res.status(200).send({
         success: true,
@@ -332,5 +335,56 @@ app.put("/customer/:email", async (req, res) => {
     console.log(error.message);
   }
 });
+
+
+
+
+
+
+// payment 
+// --------------validation for stripe payyment 
+const stripeChargeCallback = res => (stripeErr, stripeRes) => {
+  if (stripeErr) {
+    console.log(stripeErr)
+    res.status(500).send({ error: stripeErr });
+  } else {
+    // console.log(stripeRes)
+    res.status(200).send({ success: stripeRes });
+  }
+};
+
+app.post("/payment", async (req, res) => {
+  try {
+    const { parcelId, token } = req.body;
+    // console.log(parcelId)
+    // get  that parcel price from  backend
+    const specificParcel=await parcelsCollection.findOne({_id:new ObjectId(parcelId)})
+    // console.log(specificParcel)
+    // create a charge for it
+    const charge = {
+      source: token.id,
+      amount: specificParcel.TotalchargeAmount * 100,
+      currency: "usd",
+      // customer: customer.id,
+      receipt_email: specificParcel.email,
+      description: `The amount paid by ${specificParcel.name}`,
+      // billing_details: token.card,
+    };
+    // console.log(charge)
+
+    // send according response
+    stripe.charges.create(charge, stripeChargeCallback(res));
+
+
+    // update paid status in parcl collection
+    const updateResult = await parcelsCollection.updateOne({_id:new ObjectId(parcelId)}, { $set: { paid: true } });
+    console.log(updateResult)
+  } catch (error) {
+    console.error("Payment Error: ", error);
+    res.status(500).send({ error: "Payment Error" });
+  }
+});
+
+// const updateResult = await homesCollection.updateOne({ _id: ObjectId(homeID) }, { $set: { booked: true } });
 
 // ------------------------ALL Post OPERATION _________________________________
