@@ -269,17 +269,18 @@ app.get("/parcels", async (req, res) => {
 
 // /////////////////////////////////////////////////////////////////////////////////
 
-// here accually being a problem (if ) condition dont give expected result 
+// here acctually being a problem (if ) condition dont give expected result 
 
 // get a single parcel depend on ID ....
 app.get("/singleParcel", async (req, res) => {
   // try {
-    const parcelId = req.query.id;
-    console.log("parcel id", parcelId);
+  const parcelId = req.query.id;
+  console.log("parcel id", parcelId);
 
-    const result = await parcelsCollection.findOne({_id:new ObjectId(parcelId)})
-    res.send(result)})
-    
+  const result = await parcelsCollection.findOne({ _id: new ObjectId(parcelId) })
+  res.send(result)
+})
+
 
 
 
@@ -421,6 +422,24 @@ app.get("/parcels/:district", async (req, res) => {
     console.log(query)
     const result = await parcelsCollection.find(query).toArray();
     console.log(result);
+    res.status(200).send(result);
+
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send({
+      success: false,
+      message: "error failed to fetch",
+    });
+  }
+});
+
+
+
+// get all parcels
+app.get("/returned-parcels", async (req, res) => {
+  try {
+    const result = await parcelsCollection.find({status:"return"}).toArray();
+    // console.log(result);
     res.status(200).send(result);
 
   } catch (error) {
@@ -595,20 +614,20 @@ app.delete("/delete-shop", async (req, res) => {
 
 // delete customer
 app.delete('/delete/:context/:id', async (req, res) => {
-let result;
+  let result;
   try {
-    const { id ,context} = req.params
-    console.log(id,context)
+    const { id, context } = req.params
+    console.log(id, context)
 
-   if(context == "customer"){
-     result = await customerCollection.deleteOne({ _id: new ObjectId(id) })
-   }
-   if(context == "employee"){
-     result = await usersCollection.deleteOne({ _id: new ObjectId(id) })
-   }
-   if(context == "parcel"){
-     result = await parcelsCollection.deleteOne({ _id: new ObjectId(id) })
-   }
+    if (context == "customer") {
+      result = await customerCollection.deleteOne({ _id: new ObjectId(id) })
+    }
+    if (context == "employee" ||"merchant") {
+      result = await usersCollection.deleteOne({ _id: new ObjectId(id) })
+    }
+    if (context == "parcel") {
+      result = await parcelsCollection.deleteOne({ _id: new ObjectId(id) })
+    }
 
     // console.log(result)
     if (result.deletedCount === 1) {
