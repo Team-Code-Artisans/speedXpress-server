@@ -68,15 +68,15 @@ app.put("/user/:email", async (req, res) => {
 app.patch("/update-status", async (req, res) => {
   try {
     const { parcelId, updatedStatus } = req.body;
-
+    console.log(parcelId)
     const filter = { _id: new ObjectId(parcelId) };
-    const options = { upsert: true };
+    // const options = { upsert: true };
     const updateDoc = { $set: { status: updatedStatus } };
 
     const result = await parcelsCollection.updateOne(
       filter,
       updateDoc,
-      options
+
     );
     if (result.modifiedCount === 1) {
       res.status(200).send({
@@ -378,7 +378,32 @@ app.get("/shop", async (req, res) => {
 
 //
 
-//
+//get parcel for delivery boy/ employee filterd by district
+app.get("/parcels/:district", async (req, res) => {
+  try {
+    const { district } = req.params;
+    const { status } = req.query;
+    console.log({ district, status });
+
+    const query = { "customerInfo.district": district };
+
+    if (status) {
+      query.status = status;
+    }
+    console.log(query)
+    const result = await parcelsCollection.find(query).toArray();
+    console.log(result);
+    res.send(result);
+
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send({
+      success: false,
+      message: "Operation failed",
+    });
+  }
+});
+
 
 //
 
