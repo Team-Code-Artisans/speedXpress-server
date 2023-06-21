@@ -399,7 +399,7 @@ app.get("/parcels/:district", async (req, res) => {
     console.log(error.message);
     res.status(500).send({
       success: false,
-      message: "Operation failed",
+      message: "error failed to fetch",
     });
   }
 });
