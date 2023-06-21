@@ -259,6 +259,8 @@ app.get("/customers/:email", async (req, res) => {
   }
 });
 
+
+// find parcel according to email
 app.get("/parcels", async (req, res) => {
   try {
     const senderEmail = req.query.email;
@@ -288,6 +290,57 @@ app.get("/parcels", async (req, res) => {
     });
   }
 });
+
+
+// /////////////////////////////////////////////////////////////////////////////////
+
+// here accually being a problem (if ) condition dont give expected result 
+
+// get a single parcel depend on ID ....
+app.get("/singleParcel", async (req, res) => {
+  // try {
+    const parcelId = req.query.id;
+    console.log("parcel id", parcelId);
+
+    const result = await parcelsCollection.findOne({_id:new ObjectId(parcelId)})
+    res.send(result)})
+    
+
+
+
+
+
+
+//     if (result.length) {
+//       res.status(200).send({
+//         success: true,
+//         data: result,
+//       });
+//     } else {
+//       res.status(200).send({
+//         success: false,
+//         message: `No Parcels found`,
+//         data: [],
+//       });
+//     }
+//   } catch (error) {
+//     console.log(error.message);
+//     res.status(404).send({
+//       success: false,
+//       data: null,
+//       message: `Operation failed`,
+//     });
+//   }
+// });
+
+
+
+
+
+
+
+
+
 
 // get all parcel for admin account
 app.get("/all-parcels", async (req, res) => {
