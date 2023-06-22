@@ -71,11 +71,83 @@ app.patch("/update-status", async (req, res) => {
   try {
     const { parcelId, updatedStatus } = req.body;
     console.log(parcelId);
+
     const filter = { _id: new ObjectId(parcelId) };
+    const parcelInfo = await parcelsCollection.findOne(filter);
+    console.log(parcelInfo);
     // const options = { upsert: true };
     const updateDoc = { $set: { status: updatedStatus } };
 
     const result = await parcelsCollection.updateOne(filter, updateDoc);
+
+    const {
+      customerInfo,
+      weight,
+      date,
+      time,
+      deliveryFee,
+      TotalchargeAmount,
+      paid,
+      senderEmail,
+      _id,
+    } = parcelInfo;
+    const { name, email, division, district, address, merchantName } =
+      customerInfo;
+
+    const response = {
+      body: {
+        name: name,
+        intro: `Your parcel has arrived. ID: ${_id}`,
+        table: {
+          data: [
+            {
+              PARCEL_INFORMATION: `Time: ${time}`,
+            },
+            {
+              Info: `Date: ${date}`,
+            },
+            {
+              Info: `Status: ${paid ? "Paid" : "Unpaid"}`,
+            },
+            {
+              Info: `Address: ${division}, ${district}, ${address}`,
+            },
+            {
+              Info: `Parcel Weight: ${weight}`,
+            },
+            {
+              Info: `Fee: ${deliveryFee}, Total: ${TotalchargeAmount}`,
+            },
+            {
+              Info: `SenderName: ${merchantName ? merchantName : "Sender"}`,
+            },
+            {
+              Info: `SenderEmail: ${senderEmail}`,
+            },
+          ],
+        },
+        outro: "Visit Our Website speedxpress.com",
+      },
+    };
+
+    const mail = MailGenerator.generate(response);
+
+    const message = {
+      from: process.env.EMAIL,
+      to: email,
+      subject: "Place Order Successfully",
+      html: mail,
+    };
+
+    transporter.sendMail(message, function (error, info) {
+      if (error) {
+        console.log(error);
+      } else {
+        console.log("Email sent: " + info.response);
+        res.send("parcel confirmation email sent");
+      }
+    });
+
     if (result.modifiedCount === 1) {
       res.status(200).send({
         success: true,
@@ -440,74 +512,6 @@ app.post("/parcel", async (req, res) => {
   try {
     const parcelData = req.body;
     console.log(parcelData);
-    const {
-      customerInfo,
-      weight,
-      date,
-      time,
-      deliveryFee,
-      TotalchargeAmount,
-      paid,
-      senderEmail,
-    } = parcelData;
-    const { name, email, division, district, address, merchantName } =
-      customerInfo;
-
-    const result = await parcelsCollection.insertOne(parcelData);
-
-    const response = {
-      body: {
-        name: name,
-        intro: `Your parcel has arrived. ID: Payment To Get ID`,
-        table: {
-          data: [
-            {
-              PARCEL_INFORMATION: `Time: ${time}`,
-            },
-            {
-              Info: `Date: ${date}`,
-            },
-            {
-              Info: `Status: ${paid ? "Paid" : "Unpaid"}`,
-            },
-            {
-              Info: `Address: ${division}, ${district}, ${address}`,
-            },
-            {
-              Info: `Parcel Weight: ${weight}`,
-            },
-            {
-              Info: `Fee: ${deliveryFee}, Total: ${TotalchargeAmount}`,
-            },
-            {
-              Info: `SenderName: ${merchantName ? merchantName : "Sender"}`,
-            },
-            {
-              Info: `SenderEmail: ${senderEmail}`,
-            },
-          ],
-        },
-        outro: "Visit Our Website speedxpress.com",
-      },
-    };
-
-    const mail = MailGenerator.generate(response);
-
-    const message = {
-      from: process.env.EMAIL,
-      to: email,
-      subject: "Place Order Successfully",
-      html: mail,
-    };
-
-    transporter.sendMail(message, function (error, info) {
-      if (error) {
-        console.log(error);
-      } else {
-        console.log("Email sent: " + info.response);
-        res.send("parcel confirmation email sent");
-      }
-    });
 
     if (result.acknowledged) {
       res.send({
