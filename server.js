@@ -509,6 +509,53 @@ app.post("/create-shop", async (req, res) => {
     const shopData = req.body;
     const result = await shopsCollection.insertOne(shopData);
 
+    const {
+      ownerName,
+      shopName,
+      shopEmail,
+      phoneNumber,
+      district,
+      shopAddress,
+    } = shopData;
+
+    const response = {
+      body: {
+        name: ownerName,
+        intro: `Your Shop has Created`,
+        table: {
+          data: [
+            {
+              ShopName: `${shopName}`,
+              ShopEmail: `${shopEmail}`,
+            },
+            {
+              Address: `${district}, ${shopAddress}`,
+              Number: `${phoneNumber}`,
+            },
+          ],
+        },
+        outro: "Visit Our Website speedxpress.com",
+      },
+    };
+
+    const mail = MailGenerator.generate(response);
+
+    const message = {
+      from: process.env.EMAIL,
+      to: shopEmail,
+      subject: "Shop Created Successfully",
+      html: mail,
+    };
+
+    transporter.sendMail(message, function (error, info) {
+      if (error) {
+        console.log(error);
+      } else {
+        console.log("Email sent: " + info.response);
+        res.send("shop confirmation email sent");
+      }
+    });
+
     if (result.acknowledged) {
       res.send({
         message: "shop creation successfully",
