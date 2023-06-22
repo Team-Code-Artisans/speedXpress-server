@@ -437,7 +437,8 @@ app.post("/parcel", async (req, res) => {
       paid,
       senderEmail,
     } = parcelData;
-    const { name, email, district, address, merchantName } = customerInfo;
+    const { name, email, division, district, address, merchantName } =
+      customerInfo;
 
     const result = await parcelsCollection.insertOne(parcelData);
 
@@ -448,20 +449,28 @@ app.post("/parcel", async (req, res) => {
         table: {
           data: [
             {
-              Status: `Time: ${time}`,
-              ParcelInfo: `Address: ${district}, ${address}`,
-              SenderInfo: `SenderName: ${
-                merchantName ? merchantName : "Sender"
-              }`,
+              PARCEL_INFORMATION: `Time: ${time}`,
             },
             {
-              Status: `Date: ${date}`,
-              ParcelInfo: `Weight: ${weight}`,
-              SenderInfo: `SenderEmail: ${senderEmail}`,
+              Info: `Date: ${date}`,
             },
             {
-              Status: `Status: ${paid ? "Paid" : "Unpaid"}`,
-              ParcelInfo: `Fee: ${deliveryFee}, Total: ${TotalchargeAmount}`,
+              Info: `Status: ${paid ? "Paid" : "Unpaid"}`,
+            },
+            {
+              Info: `Address: ${division}, ${district}, ${address}`,
+            },
+            {
+              Info: `Parcel Weight: ${weight}`,
+            },
+            {
+              Info: `Fee: ${deliveryFee}, Total: ${TotalchargeAmount}`,
+            },
+            {
+              Info: `SenderName: ${merchantName ? merchantName : "Sender"}`,
+            },
+            {
+              Info: `SenderEmail: ${senderEmail}`,
             },
           ],
         },
