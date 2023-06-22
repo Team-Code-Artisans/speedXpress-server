@@ -5,6 +5,8 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KAY);
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.n84h1t4.mongodb.net/?retryWrites=true&w=majority`;
+const nodemailer = require("nodemailer");
+const MailGen = require("mailgen");
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -68,16 +70,12 @@ app.put("/user/:email", async (req, res) => {
 app.patch("/update-status", async (req, res) => {
   try {
     const { parcelId, updatedStatus } = req.body;
-    console.log(parcelId)
+    console.log(parcelId);
     const filter = { _id: new ObjectId(parcelId) };
     // const options = { upsert: true };
     const updateDoc = { $set: { status: updatedStatus } };
 
-    const result = await parcelsCollection.updateOne(
-      filter,
-      updateDoc,
-
-    );
+    const result = await parcelsCollection.updateOne(filter, updateDoc);
     if (result.modifiedCount === 1) {
       res.status(200).send({
         success: true,
@@ -390,11 +388,10 @@ app.get("/parcels/:district", async (req, res) => {
     if (status) {
       query.status = status;
     }
-    console.log(query)
+    console.log(query);
     const result = await parcelsCollection.find(query).toArray();
     console.log(result);
     res.send(result);
-
   } catch (error) {
     console.log(error.message);
     res.status(500).send({
@@ -404,27 +401,101 @@ app.get("/parcels/:district", async (req, res) => {
   }
 });
 
-
 //
+
+// Nodemailer setup
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL,
+    pass: process.env.PASS,
+  },
+});
+
+const MailGenerator = new MailGen({
+  theme: "default",
+  product: {
+    name: "Mailgen",
+    link: "https://mailgen.js/",
+  },
+});
 
 // ------------------------ALL POST OPERATION _________________________________
 
 // create parcel .
 app.post("/parcel", async (req, res) => {
   try {
-    const customerData = req.body;
-    const result = await parcelsCollection.insertOne(customerData);
+    const parcelData = req.body;
+    console.log(parcelData);
+    const {
+      customerInfo,
+      weight,
+      date,
+      time,
+      deliveryFee,
+      TotalchargeAmount,
+      paid,
+      _id,
+    } = parcelData;
+    const { name, email, district, address, merchantEmail, merchantName } =
+      customerInfo;
+
+    const result = await parcelsCollection.insertOne(parcelData);
+
+    const response = {
+      body: {
+        name: name,
+        intro: `Your parcel has arrived. ID: Payment To Get ID`,
+        table: {
+          data: [
+            {
+              Time: `${time}`,
+              Date: `${date}`,
+              Paid: `${paid ? "Paid" : "Unpaid"}`,
+            },
+            {
+              Address: `${district}, ${address}`,
+              Weight: `${weight}`,
+              TotalCharge: `Fee: ${deliveryFee}, Total: ${TotalchargeAmount}`,
+            },
+            {
+              MerchantName: `${merchantName}`,
+              MerchantEmail: `${merchantEmail}`,
+            },
+          ],
+        },
+        outro: "Visit Our Website speedxpress.com",
+      },
+    };
+
+    const mail = MailGenerator.generate(response);
+
+    const message = {
+      from: process.env.EMAIL,
+      to: email,
+      subject: "Place Order Successfully",
+      html: mail,
+    };
+
+    transporter.sendMail(message, function (error, info) {
+      if (error) {
+        console.log(error);
+      } else {
+        console.log("Email sent: " + info.response);
+        res.send("parcel confirmation email sent");
+      }
+    });
 
     if (result.acknowledged) {
       res.send({
-        message: "parcel creation successfull ",
+        message: "parcel creation successfully ",
         data: result,
       });
     }
   } catch (error) {
     console.log(error.message);
     res.status(404).send({
-      message: "Booking failed! for some issue!",
+      message: "Order failed! for some issue!",
       data: null,
     });
   }
@@ -440,7 +511,7 @@ app.post("/create-shop", async (req, res) => {
 
     if (result.acknowledged) {
       res.send({
-        message: "shop creation successfull ",
+        message: "shop creation successfully",
         data: result,
       });
     }
@@ -492,7 +563,7 @@ const stripeChargeCallback = (res) => (stripeErr, stripeRes) => {
 app.post("/payment", async (req, res) => {
   try {
     const { parcelId, token } = req.body;
-    // console.log(parcelId)
+    console.log(req.body);
     // get  that parcel price from  backend
     const specificParcel = await parcelsCollection.findOne({
       _id: new ObjectId(parcelId),
