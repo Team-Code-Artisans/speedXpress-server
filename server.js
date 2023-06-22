@@ -141,31 +141,6 @@ app.patch("/update-shop", async (req, res) => {
 
 // ------------------------ALL PUT OPERATION _________________________________
 
-// merchant shop delete
-app.delete("/delete-shop", async (req, res) => {
-  try {
-    const { shopId } = req.body;
-    const filter = { _id: new ObjectId(shopId) };
-    const result = await shopsCollection.deleteOne(filter);
-    if (result.modifiedCount === 1) {
-      res.status(200).send({
-        success: true,
-        message: "shop deleted successfully",
-      });
-    } else {
-      res.status(404).send({
-        success: false,
-        message: "Failed to delete shop",
-      });
-    }
-  } catch (error) {
-    console.log(error.message);
-    res.status(500).send({
-      success: false,
-      message: `Operation failed`,
-    });
-  }
-});
 
 //
 
@@ -294,17 +269,18 @@ app.get("/parcels", async (req, res) => {
 
 // /////////////////////////////////////////////////////////////////////////////////
 
-// here accually being a problem (if ) condition dont give expected result 
+// here acctually being a problem (if ) condition dont give expected result 
 
 // get a single parcel depend on ID ....
 app.get("/singleParcel", async (req, res) => {
   // try {
-    const parcelId = req.query.id;
-    console.log("parcel id", parcelId);
+  const parcelId = req.query.id;
+  console.log("parcel id", parcelId);
 
-    const result = await parcelsCollection.findOne({_id:new ObjectId(parcelId)})
-    res.send(result)})
-    
+  const result = await parcelsCollection.findOne({ _id: new ObjectId(parcelId) })
+  res.send(result)
+})
+
 
 
 
@@ -446,7 +422,25 @@ app.get("/parcels/:district", async (req, res) => {
     console.log(query)
     const result = await parcelsCollection.find(query).toArray();
     console.log(result);
-    res.send(result);
+    res.status(200).send(result);
+
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send({
+      success: false,
+      message: "error failed to fetch",
+    });
+  }
+});
+
+
+
+// get all parcels
+app.get("/returned-parcels", async (req, res) => {
+  try {
+    const result = await parcelsCollection.find({status:"return"}).toArray();
+    // console.log(result);
+    res.status(200).send(result);
 
   } catch (error) {
     console.log(error.message);
@@ -581,3 +575,78 @@ app.post("/payment", async (req, res) => {
 // const updateResult = await homesCollection.updateOne({ _id: ObjectId(homeID) }, { $set: { booked: true } });
 
 // ------------------------ALL Post OPERATION _________________________________
+
+// 
+
+// 
+
+// 
+// ------------------------ALL DELETE OPERATION _________________________________
+
+
+// merchant shop delete
+app.delete("/delete-shop", async (req, res) => {
+  try {
+    const { shopId } = req.body;
+    const filter = { _id: new ObjectId(shopId) };
+    const result = await shopsCollection.deleteOne(filter);
+    if (result.modifiedCount === 1) {
+      res.status(200).send({
+        success: true,
+        message: "shop deleted successfully",
+      });
+    } else {
+      res.status(404).send({
+        success: false,
+        message: "Failed to delete shop",
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send({
+      success: false,
+      message: `Operation failed`,
+    });
+  }
+});
+
+
+
+// delete customer
+app.delete('/delete/:context/:id', async (req, res) => {
+  let result;
+  try {
+    const { id, context } = req.params
+    console.log(id, context)
+
+    if (context == "customer") {
+      result = await customerCollection.deleteOne({ _id: new ObjectId(id) })
+    }
+    if (context == "employee" ||"merchant") {
+      result = await usersCollection.deleteOne({ _id: new ObjectId(id) })
+    }
+    if (context == "parcel") {
+      result = await parcelsCollection.deleteOne({ _id: new ObjectId(id) })
+    }
+
+    // console.log(result)
+    if (result.deletedCount === 1) {
+      res.status(200).send({
+        success: true,
+        message: " Deleted successfully",
+      });
+    } else {
+      res.status(404).send({
+        success: false,
+        message: "Failed to delete",
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send({
+      success: false,
+      message: `Operation failed`,
+    });
+  }
+
+})
