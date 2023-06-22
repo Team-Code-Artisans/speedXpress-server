@@ -435,9 +435,8 @@ app.post("/parcel", async (req, res) => {
       deliveryFee,
       TotalchargeAmount,
       paid,
-      _id,
     } = parcelData;
-    const { name, email, district, address, merchantEmail, merchantName } =
+    const { name, email, district, address, senderEmail, merchantName } =
       customerInfo;
 
     const result = await parcelsCollection.insertOne(parcelData);
@@ -459,8 +458,8 @@ app.post("/parcel", async (req, res) => {
               TotalCharge: `Fee: ${deliveryFee}, Total: ${TotalchargeAmount}`,
             },
             {
-              MerchantName: `${merchantName}`,
-              MerchantEmail: `${merchantEmail}`,
+              SenderName: `${merchantName ? merchantName : "Sender"}`,
+              SenderEmail: `${senderEmail}`,
             },
           ],
         },
@@ -610,7 +609,7 @@ const stripeChargeCallback = (res) => (stripeErr, stripeRes) => {
 app.post("/payment", async (req, res) => {
   try {
     const { parcelId, token } = req.body;
-    console.log(req.body);
+    const { brand, country, funding, last4 } = token.card;
     // get  that parcel price from  backend
     const specificParcel = await parcelsCollection.findOne({
       _id: new ObjectId(parcelId),
@@ -637,6 +636,46 @@ app.post("/payment", async (req, res) => {
       { $set: { paid: true } }
     );
     console.log(updateResult);
+
+    // send mail
+
+    const response = {
+      body: {
+        name: token.email,
+        intro: `Payment Successfully. Parcel ID: ${parcelId}`,
+        table: {
+          data: [
+            {
+              Status: "Paid",
+              Payment: `${token.type}`,
+              Brand: `${brand}`,
+              Country: `${country}`,
+              Card: `${funding}`,
+              Last4: `${last4}`,
+            },
+          ],
+        },
+        outro: "Visit Our Website speedxpress.com",
+      },
+    };
+
+    const mail = MailGenerator.generate(response);
+
+    const message = {
+      from: process.env.EMAIL,
+      to: token.email,
+      subject: "Parcel Payment Successfully",
+      html: mail,
+    };
+
+    transporter.sendMail(message, function (error, info) {
+      if (error) {
+        console.log(error);
+      } else {
+        console.log("Email sent: " + info.response);
+        res.send("parcel confirmation email sent");
+      }
+    });
   } catch (error) {
     console.error("Payment Error: ", error);
     res.status(500).send({ error: "Payment Error" });
