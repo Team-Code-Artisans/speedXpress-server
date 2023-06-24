@@ -1,3 +1,4 @@
+const app = require("./app");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
@@ -151,7 +152,7 @@ app.patch("/update-status", async (req, res) => {
     const message = {
       from: process.env.EMAIL,
       to: email,
-      subject: "Your Order Was Arrived",
+      subject: "Place Was Accepted",
       html: mail,
     };
 
