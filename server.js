@@ -1,5 +1,4 @@
-const app = require("./app");
-const dotenv = require("dotenv").config();
+require("dotenv").config();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
@@ -152,7 +151,7 @@ app.patch("/update-status", async (req, res) => {
     const message = {
       from: process.env.EMAIL,
       to: email,
-      subject: "Place Order Successfully",
+      subject: "Your Order Was Arrived",
       html: mail,
     };
 
