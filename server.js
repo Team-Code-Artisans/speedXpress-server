@@ -38,7 +38,7 @@ app.get("/", (req, res) => {
   });
 });
 
-// Nodemailer setup
+// Nodemailer setup (for sending mail to user )
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -351,9 +351,12 @@ app.get("/parcels", async (req, res) => {
   }
 });
 
-app.get("/singleParcel/:parcelId", async (req, res) => {
+
+///get a single parcel .. to get the status for showing the track level
+
+app.get("/singleParcel", async (req, res) => {
   try {
-    const parcelId = req.params.parcelId;
+    const parcelId = req.query.i
     const result = await parcelsCollection.findOne({
       _id: new ObjectId(parcelId),
     });
