@@ -1,10 +1,12 @@
 const app = require("./app");
-const dotenv = require("dotenv").config();
+require("dotenv").config();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KAY);
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.n84h1t4.mongodb.net/?retryWrites=true&w=majority`;
+const nodemailer = require("nodemailer");
+const MailGen = require("mailgen");
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -34,6 +36,23 @@ app.get("/", (req, res) => {
   res.send({
     message: "speedXpress server is running ",
   });
+});
+
+// Nodemailer setup (for sending mail to user )
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL,
+    pass: process.env.PASS,
+  },
+});
+
+const MailGenerator = new MailGen({
+  theme: "default",
+  product: {
+    name: "Mailgen",
+    link: "https://mailgen.js/",
+  },
 });
 
 // collections
@@ -68,16 +87,84 @@ app.put("/user/:email", async (req, res) => {
 app.patch("/update-status", async (req, res) => {
   try {
     const { parcelId, updatedStatus } = req.body;
-    console.log(parcelId)
+    console.log(parcelId);
+
     const filter = { _id: new ObjectId(parcelId) };
+    const parcelInfo = await parcelsCollection.findOne(filter);
+    console.log(parcelInfo);
     // const options = { upsert: true };
     const updateDoc = { $set: { status: updatedStatus } };
 
-    const result = await parcelsCollection.updateOne(
-      filter,
-      updateDoc,
+    const result = await parcelsCollection.updateOne(filter, updateDoc);
 
-    );
+    const {
+      customerInfo,
+      weight,
+      date,
+      time,
+      deliveryFee,
+      TotalchargeAmount,
+      paid,
+      senderEmail,
+      _id,
+    } = parcelInfo;
+    const { name, email, division, district, address, merchantName } =
+      customerInfo;
+
+    const response = {
+      body: {
+        name: name,
+        intro: `Your parcel has arrived. ID: ${_id}`,
+        table: {
+          data: [
+            {
+              PARCEL_INFORMATION: `Time: ${time}`,
+            },
+            {
+              Info: `Date: ${date}`,
+            },
+            {
+              Info: `Status: ${paid ? "Paid" : "Unpaid"}`,
+            },
+            {
+              Info: `Address: ${division}, ${district}, ${address}`,
+            },
+            {
+              Info: `Parcel Weight: ${weight}`,
+            },
+            {
+              Info: `Fee: ${deliveryFee}, Total: ${TotalchargeAmount}`,
+            },
+            {
+              Info: `SenderName: ${merchantName ? merchantName : "Sender"}`,
+            },
+            {
+              Info: `SenderEmail: ${senderEmail}`,
+            },
+          ],
+        },
+        outro: "Visit Our Website speedxpress.com",
+      },
+    };
+
+    const mail = MailGenerator.generate(response);
+
+    const message = {
+      from: process.env.EMAIL,
+      to: email,
+      subject: "Place Was Accepted",
+      html: mail,
+    };
+
+    transporter.sendMail(message, function (error, info) {
+      if (error) {
+        console.log(error);
+      } else {
+        console.log("Email sent: " + info.response);
+        res.send("parcel confirmation email sent");
+      }
+    });
+
     if (result.modifiedCount === 1) {
       res.status(200).send({
         success: true,
@@ -140,32 +227,6 @@ app.patch("/update-shop", async (req, res) => {
 //
 
 // ------------------------ALL PUT OPERATION _________________________________
-
-// merchant shop delete
-app.delete("/delete-shop", async (req, res) => {
-  try {
-    const { shopId } = req.body;
-    const filter = { _id: new ObjectId(shopId) };
-    const result = await shopsCollection.deleteOne(filter);
-    if (result.modifiedCount === 1) {
-      res.status(200).send({
-        success: true,
-        message: "shop deleted successfully",
-      });
-    } else {
-      res.status(404).send({
-        success: false,
-        message: "Failed to delete shop",
-      });
-    }
-  } catch (error) {
-    console.log(error.message);
-    res.status(500).send({
-      success: false,
-      message: `Operation failed`,
-    });
-  }
-});
 
 //
 
@@ -245,7 +306,7 @@ app.get("/customers/:email", async (req, res) => {
     } else {
       res.status(200).send({
         success: false,
-        message: `No cumtomer found`,
+        message: `No customer found`,
         data: [],
       });
     }
@@ -259,6 +320,7 @@ app.get("/customers/:email", async (req, res) => {
   }
 });
 
+// find parcel according to email
 app.get("/parcels", async (req, res) => {
   try {
     const senderEmail = req.query.email;
@@ -286,6 +348,26 @@ app.get("/parcels", async (req, res) => {
       data: null,
       message: `Operation failed`,
     });
+  }
+});
+
+
+///get a single parcel .. to get the status for showing the track level
+
+app.get("/singleParcel", async (req, res) => {
+  try {
+    const parcelId = req.query.i
+    const result = await parcelsCollection.findOne({
+      _id: new ObjectId(parcelId),
+    });
+
+    if (!result) {
+      return res.status(404).json({ error: "Parcel not found" });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Parcel Not Found" });
   }
 });
 
@@ -378,7 +460,7 @@ app.get("/shop", async (req, res) => {
 
 //
 
-//get parcel for delivery boy/ employee filterd by district
+//get parcel for delivery boy/ employee filtered by district
 app.get("/parcels/:district", async (req, res) => {
   try {
     const { district } = req.params;
@@ -390,11 +472,10 @@ app.get("/parcels/:district", async (req, res) => {
     if (status) {
       query.status = status;
     }
-    console.log(query)
+    console.log(query);
     const result = await parcelsCollection.find(query).toArray();
     console.log(result);
     res.send(result);
-
   } catch (error) {
     console.log(error.message);
     res.status(500).send({
@@ -404,7 +485,6 @@ app.get("/parcels/:district", async (req, res) => {
   }
 });
 
-
 //
 
 // ------------------------ALL POST OPERATION _________________________________
@@ -412,19 +492,88 @@ app.get("/parcels/:district", async (req, res) => {
 // create parcel .
 app.post("/parcel", async (req, res) => {
   try {
-    const customerData = req.body;
-    const result = await parcelsCollection.insertOne(customerData);
+    const parcelData = req.body;
+    console.log(parcelData);
+
+    const {
+      customerInfo,
+      weight,
+      date,
+      time,
+      deliveryFee,
+      TotalchargeAmount,
+      paid,
+      senderEmail,
+    } = parcelData;
+    const { name, email, division, district, address, merchantName } =
+      customerInfo;
+
+    const result = await parcelsCollection.insertOne(parcelData);
+
+    const response = {
+      body: {
+        name: name,
+        intro: `Your parcel was created. ID: Payment To Get ID`,
+        table: {
+          data: [
+            {
+              PARCEL_INFORMATION: `Time: ${time}`,
+            },
+            {
+              Info: `Date: ${date}`,
+            },
+            {
+              Info: `Status: ${paid ? "Paid" : "Unpaid"}`,
+            },
+            {
+              Info: `Address: ${division}, ${district}, ${address}`,
+            },
+            {
+              Info: `Parcel Weight: ${weight}`,
+            },
+            {
+              Info: `Fee: ${deliveryFee}, Total: ${TotalchargeAmount}`,
+            },
+            {
+              Info: `SenderName: ${merchantName ? merchantName : "Sender"}`,
+            },
+            {
+              Info: `SenderEmail: ${senderEmail}`,
+            },
+          ],
+        },
+        outro: "Visit Our Website speedxpress.com",
+      },
+    };
+
+    const mail = MailGenerator.generate(response);
+
+    const message = {
+      from: process.env.EMAIL,
+      to: email,
+      subject: "Place Order Successfully",
+      html: mail,
+    };
+
+    transporter.sendMail(message, function (error, info) {
+      if (error) {
+        console.log(error);
+      } else {
+        console.log("Email sent: " + info.response);
+        res.send("parcel confirmation email sent");
+      }
+    });
 
     if (result.acknowledged) {
       res.send({
-        message: "parcel creation successfull ",
+        message: "parcel creation successfully ",
         data: result,
       });
     }
   } catch (error) {
     console.log(error.message);
     res.status(404).send({
-      message: "Booking failed! for some issue!",
+      message: "Order failed! for some issue!",
       data: null,
     });
   }
@@ -438,9 +587,54 @@ app.post("/create-shop", async (req, res) => {
     const shopData = req.body;
     const result = await shopsCollection.insertOne(shopData);
 
+    const {
+      ownerName,
+      shopName,
+      shopEmail,
+      phoneNumber,
+      district,
+      shopAddress,
+    } = shopData;
+
+    const response = {
+      body: {
+        name: ownerName,
+        intro: `Your Shop has Created`,
+        table: {
+          data: [
+            {
+              ShopName: `${shopName}`,
+              ShopEmail: `${shopEmail}`,
+              Address: `${district}, ${shopAddress}`,
+              Number: `${phoneNumber}`,
+            },
+          ],
+        },
+        outro: "Visit Our Website speedxpress.com",
+      },
+    };
+
+    const mail = MailGenerator.generate(response);
+
+    const message = {
+      from: process.env.EMAIL,
+      to: shopEmail,
+      subject: "Shop Created Successfully",
+      html: mail,
+    };
+
+    transporter.sendMail(message, function (error, info) {
+      if (error) {
+        console.log(error);
+      } else {
+        console.log("Email sent: " + info.response);
+        res.send("shop confirmation email sent");
+      }
+    });
+
     if (result.acknowledged) {
       res.send({
-        message: "shop creation successfull ",
+        message: "shop creation successfully",
         data: result,
       });
     }
@@ -463,7 +657,7 @@ app.put("/customer/:email", async (req, res) => {
     const updateDoc = {
       $set: customer,
     };
-    // if customer exist then replace him and if don't exisst then create new customer ..
+    // if customer exist then replace him and if don't exists then create new customer ..
     const result = await customerCollection.updateOne(
       filter,
       updateDoc,
@@ -478,7 +672,7 @@ app.put("/customer/:email", async (req, res) => {
 });
 
 // payment
-// --------------validation for stripe payyment
+// --------------validation for stripe payment
 const stripeChargeCallback = (res) => (stripeErr, stripeRes) => {
   if (stripeErr) {
     console.log(stripeErr);
@@ -492,12 +686,13 @@ const stripeChargeCallback = (res) => (stripeErr, stripeRes) => {
 app.post("/payment", async (req, res) => {
   try {
     const { parcelId, token } = req.body;
-    // console.log(parcelId)
+    const { brand, country, funding, last4 } = token.card;
+
     // get  that parcel price from  backend
     const specificParcel = await parcelsCollection.findOne({
       _id: new ObjectId(parcelId),
     });
-    // console.log(specificParcel)
+
     // create a charge for it
     const charge = {
       source: token.id,
@@ -513,18 +708,127 @@ app.post("/payment", async (req, res) => {
     // send according response
     stripe.charges.create(charge, stripeChargeCallback(res));
 
-    // update paid status in parcl collection
+    // update paid status in parcel collection
     const updateResult = await parcelsCollection.updateOne(
       { _id: new ObjectId(parcelId) },
       { $set: { paid: true } }
     );
     console.log(updateResult);
+
+    // send mail
+
+    const response = {
+      body: {
+        name: token.email,
+        intro: `Payment Successfully. Parcel ID: ${parcelId}`,
+        table: {
+          data: [
+            {
+              Status: "Paid",
+              Payment: `${token.type}`,
+              Brand: `${brand}`,
+              Country: `${country}`,
+              Card: `${funding}`,
+              Last4: `${last4}`,
+            },
+          ],
+        },
+        outro: "Visit Our Website speedxpress.com",
+      },
+    };
+
+    const mail = MailGenerator.generate(response);
+
+    const message = {
+      from: process.env.EMAIL,
+      to: token.email,
+      subject: "Parcel Payment Successfully",
+      html: mail,
+    };
+
+    transporter.sendMail(message, function (error, info) {
+      if (error) {
+        console.log(error);
+      } else {
+        console.log("Email sent: " + info.response);
+        res.send("parcel confirmation email sent");
+      }
+    });
   } catch (error) {
     console.error("Payment Error: ", error);
     res.status(500).send({ error: "Payment Error" });
   }
 });
 
-// const updateResult = await homesCollection.updateOne({ _id: ObjectId(homeID) }, { $set: { booked: true } });
-
 // ------------------------ALL Post OPERATION _________________________________
+
+//
+
+//
+
+//
+// ------------------------ALL DELETE OPERATION _________________________________
+
+// merchant shop delete
+app.delete("/delete-shop", async (req, res) => {
+  try {
+    const { shopId } = req.body;
+    const filter = { _id: new ObjectId(shopId) };
+    const result = await shopsCollection.deleteOne(filter);
+    if (result.modifiedCount === 1) {
+      res.status(200).send({
+        success: true,
+        message: "shop deleted successfully",
+      });
+    } else {
+      res.status(404).send({
+        success: false,
+        message: "Failed to delete shop",
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send({
+      success: false,
+      message: `Operation failed`,
+    });
+  }
+});
+
+// delete customer
+app.delete("/delete/:context/:id", async (req, res) => {
+  let result;
+  try {
+    const { id, context } = req.params;
+    console.log(id, context);
+
+    if (context == "customer") {
+      result = await customerCollection.deleteOne({ _id: new ObjectId(id) });
+    }
+    if (context == "employee" || "merchant") {
+      result = await usersCollection.deleteOne({ _id: new ObjectId(id) });
+    }
+    if (context == "parcel") {
+      result = await parcelsCollection.deleteOne({ _id: new ObjectId(id) });
+    }
+
+    // console.log(result)
+    if (result.deletedCount === 1) {
+      res.status(200).send({
+        success: true,
+        message: " Deleted successfully",
+      });
+    } else {
+      res.status(404).send({
+        success: false,
+        message: "Failed to delete",
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send({
+      success: false,
+      message: `Operation failed`,
+    });
+  }
+});
